@@ -731,6 +731,13 @@ func (b *Batch) execute(ctx context.Context, conn *Conn) *Iter {
 	return conn.executeBatch(ctx, b)
 }
 
+// Exec executes a batch operation and returns nil if successful
+// otherwise an error is returned describing the failure.
+func (b *Batch) Exec() error {
+	iter := b.session.executeBatch(b)
+	return iter.Close()
+}
+
 func (s *Session) executeBatch(batch *Batch) *Iter {
 	// fail fast
 	if s.Closed() {
@@ -1747,20 +1754,15 @@ type Batch struct {
 	routingInfo *queryRoutingInfo
 }
 
-// NewBatch creates a new batch operation without defaults from the cluster
+// NewBatch creates a new batch operation using defaults defined in the cluster
 //
-// Deprecated: use session.NewBatch instead
-func NewBatch(typ BatchType) *Batch {
-	return &Batch{
-		Type:        typ,
-		metrics:     &queryMetrics{m: make(map[string]*hostMetrics)},
-		spec:        &NonSpeculativeExecution{},
-		routingInfo: &queryRoutingInfo{},
-	}
+// Deprecated: use session.Batch instead
+func (s *Session) NewBatch(typ BatchType) *Batch {
+	return s.Batch(typ)
 }
 
-// NewBatch creates a new batch operation using defaults defined in the cluster
-func (s *Session) NewBatch(typ BatchType) *Batch {
+// Batch creates a new batch operation using defaults defined in the cluster
+func (s *Session) Batch(typ BatchType) *Batch {
 	s.mu.RLock()
 	batch := &Batch{
 		Type:             typ,
@@ -1860,8 +1862,9 @@ func (b *Batch) SpeculativeExecutionPolicy(sp SpeculativeExecutionPolicy) *Batch
 }
 
 // Query adds the query to the batch operation
-func (b *Batch) Query(stmt string, args ...interface{}) {
+func (b *Batch) Query(stmt string, args ...interface{}) *Batch {
 	b.Entries = append(b.Entries, BatchEntry{Stmt: stmt, Args: args})
+	return b
 }
 
 // Bind adds the query to the batch operation and correlates it with a binding callback

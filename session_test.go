@@ -96,7 +96,7 @@ func TestSessionAPI(t *testing.T) {
 		t.Fatalf("expected itr.err to be '%v', got '%v'", ErrNoConnections, itr.err)
 	}
 
-	testBatch := s.NewBatch(LoggedBatch)
+	testBatch := s.Batch(LoggedBatch)
 	testBatch.Query("test")
 	err := s.ExecuteBatch(testBatch)
 
@@ -219,7 +219,7 @@ func TestBatchBasicAPI(t *testing.T) {
 	s.pool = cfg.PoolConfig.buildPool(s)
 
 	// Test UnloggedBatch
-	b := s.NewBatch(UnloggedBatch)
+	b := s.Batch(UnloggedBatch)
 	if b.Type != UnloggedBatch {
 		t.Fatalf("expceted batch.Type to be '%v', got '%v'", UnloggedBatch, b.Type)
 	} else if b.rt != cfg.RetryPolicy {
@@ -227,7 +227,7 @@ func TestBatchBasicAPI(t *testing.T) {
 	}
 
 	// Test LoggedBatch
-	b = s.NewBatch(LoggedBatch)
+	b = s.Batch(LoggedBatch)
 	if b.Type != LoggedBatch {
 		t.Fatalf("expected batch.Type to be '%v', got '%v'", LoggedBatch, b.Type)
 	}
@@ -345,5 +345,72 @@ func TestIsUseStatement(t *testing.T) {
 		if v != tc.exp {
 			t.Fatalf("expected %v but got %v for statement %q", tc.exp, v, tc.input)
 		}
+	}
+}
+
+type simpleTestRetryPolycy struct {
+	RetryType  RetryType
+	NumRetries int
+}
+
+func (p *simpleTestRetryPolycy) Attempt(q RetryableQuery) bool {
+	return q.Attempts() <= p.NumRetries
+}
+
+func (p *simpleTestRetryPolycy) GetRetryType(error) RetryType {
+	return p.RetryType
+}
+
+// TestRetryType_IgnoreRethrow verify that with Ignore/Rethrow retry types:
+// - retries stopped
+// - return error is nil on Ignore
+// - return error is not nil on Rethrow
+// - observed error is not nil
+func TestRetryType_IgnoreRethrow(t *testing.T) {
+	session := createSession(t)
+	defer session.Close()
+
+	var observedErr error
+	var observedAttempts int
+
+	resetObserved := func() {
+		observedErr = nil
+		observedAttempts = 0
+	}
+
+	observer := funcQueryObserver(func(ctx context.Context, o ObservedQuery) {
+		observedErr = o.Err
+		observedAttempts++
+	})
+
+	for _, caseParams := range []struct {
+		retries   int
+		retryType RetryType
+	}{
+		{0, Ignore},  // check that error ignored even on last attempt
+		{1, Ignore},  // check thet ignore stops retries
+		{1, Rethrow}, // check thet rethrow stops retries
+	} {
+		retryPolicy := &simpleTestRetryPolycy{RetryType: caseParams.retryType, NumRetries: caseParams.retries}
+
+		err := session.Query("INSERT INTO gocql_test.invalid_table(value) VALUES(1)").Idempotent(true).RetryPolicy(retryPolicy).Observer(observer).Exec()
+
+		if err != nil && caseParams.retryType == Ignore {
+			t.Fatalf("[%v] Expected no error, got: %s", caseParams.retryType, err)
+		}
+
+		if err == nil && caseParams.retryType == Rethrow {
+			t.Fatalf("[%v] Expected unconfigured table error, got: nil", caseParams.retryType)
+		}
+
+		if observedErr == nil {
+			t.Fatal("Expected unconfigured table error in Obserer, got: nil")
+		}
+
+		if observedAttempts > 1 {
+			t.Fatalf("Expected one attempt, got: %d", observedAttempts)
+		}
+
+		resetObserved()
 	}
 }

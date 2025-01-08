@@ -25,6 +25,7 @@
 package gocql
 
 import (
+	"github.com/gocql/gocql/internal"
 	"net"
 	"sync"
 	"testing"
@@ -36,7 +37,7 @@ func TestEventDebounce(t *testing.T) {
 	wg.Add(1)
 
 	eventsSeen := 0
-	debouncer := newEventDebouncer("testDebouncer", func(events []frame) {
+	debouncer := newEventDebouncer("testDebouncer", func(events []internal.Frame) {
 		defer wg.Done()
 		eventsSeen += len(events)
 	}, &defaultLogger{})

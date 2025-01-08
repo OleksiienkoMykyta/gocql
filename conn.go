@@ -39,23 +39,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/gocql/gocql/internal"
 	"github.com/gocql/gocql/internal/lru"
 	"github.com/gocql/gocql/internal/streams"
 )
-
-// approve the authenticator with the list of allowed authenticators. If the provided list is empty,
-// the given authenticator is allowed.
-func approve(authenticator string, approvedAuthenticators []string) bool {
-	if len(approvedAuthenticators) == 0 {
-		return true
-	}
-	for _, s := range approvedAuthenticators {
-		if authenticator == s {
-			return true
-		}
-	}
-	return false
-}
 
 // JoinHostPort is a utility to return an address string that can be used
 // by `gocql.Conn` to form a connection with a host.
@@ -85,7 +72,7 @@ type PasswordAuthenticator struct {
 }
 
 func (p PasswordAuthenticator) Challenge(req []byte) ([]byte, Authenticator, error) {
-	if !approve(string(req), p.AllowedAuthenticators) {
+	if !internal.Approve(string(req), p.AllowedAuthenticators) {
 		return nil, nil, fmt.Errorf("unexpected authenticator %q", req)
 	}
 	resp := make([]byte, 2+len(p.Username)+len(p.Password))
@@ -188,7 +175,7 @@ type Conn struct {
 	frameObserver  FrameHeaderObserver
 	streamObserver StreamObserver
 
-	headerBuf [maxFrameHeaderSize]byte
+	headerBuf [internal.MaxFrameHeaderSize]byte
 
 	streams *streams.IDGenerator
 	mu      sync.Mutex
@@ -406,7 +393,7 @@ func (s *startupCoordinator) setupConn(ctx context.Context) error {
 	return nil
 }
 
-func (s *startupCoordinator) write(ctx context.Context, frame frameBuilder) (frame, error) {
+func (s *startupCoordinator) write(ctx context.Context, frame frameBuilder) (internal.Frame, error) {
 	select {
 	case s.frameTicker <- struct{}{}:
 	case <-ctx.Done():
@@ -585,8 +572,8 @@ func (c *Conn) serve(ctx context.Context) {
 	c.closeWithError(err)
 }
 
-func (c *Conn) discardFrame(head frameHeader) error {
-	_, err := io.CopyN(ioutil.Discard, c, int64(head.length))
+func (c *Conn) discardFrame(head internal.FrameHeader) error {
+	_, err := io.CopyN(ioutil.Discard, c, int64(head.Length))
 	if err != nil {
 		return err
 	}
@@ -594,14 +581,14 @@ func (c *Conn) discardFrame(head frameHeader) error {
 }
 
 type protocolError struct {
-	frame frame
+	frame internal.Frame
 }
 
 func (p *protocolError) Error() string {
 	if err, ok := p.frame.(error); ok {
 		return err.Error()
 	}
-	return fmt.Sprintf("gocql: received unexpected frame on stream %d: %v", p.frame.Header().stream, p.frame)
+	return fmt.Sprintf("gocql: received unexpected frame on stream %d: %v", p.frame.Header().Stream, p.frame)
 }
 
 func (c *Conn) heartBeat(ctx context.Context) {
@@ -670,20 +657,20 @@ func (c *Conn) recv(ctx context.Context) error {
 
 	if c.frameObserver != nil {
 		c.frameObserver.ObserveFrameHeader(context.Background(), ObservedFrameHeader{
-			Version: protoVersion(head.version),
-			Flags:   head.flags,
-			Stream:  int16(head.stream),
-			Opcode:  frameOp(head.op),
-			Length:  int32(head.length),
+			Version: internal.ProtoVersion(head.Version),
+			Flags:   head.Flags,
+			Stream:  int16(head.Stream),
+			Opcode:  internal.FrameOp(head.Op),
+			Length:  int32(head.Length),
 			Start:   headStartTime,
 			End:     headEndTime,
 			Host:    c.host,
 		})
 	}
 
-	if head.stream > c.streams.NumStreams {
-		return fmt.Errorf("gocql: frame header stream is beyond call expected bounds: %d", head.stream)
-	} else if head.stream == -1 {
+	if head.Stream > c.streams.NumStreams {
+		return fmt.Errorf("gocql: frame header stream is beyond call expected bounds: %d", head.Stream)
+	} else if head.Stream == -1 {
 		// TODO: handle cassandra event frames, we shouldnt get any currently
 		framer := newFramer(c.compressor, c.version)
 		if err := framer.readFrame(c, &head); err != nil {
@@ -691,7 +678,7 @@ func (c *Conn) recv(ctx context.Context) error {
 		}
 		go c.session.handleEvent(framer)
 		return nil
-	} else if head.stream <= 0 {
+	} else if head.Stream <= 0 {
 		// reserved stream that we dont use, probably due to a protocol error
 		// or a bug in Cassandra, this should be an error, parse it and return.
 		framer := newFramer(c.compressor, c.version)
@@ -714,14 +701,14 @@ func (c *Conn) recv(ctx context.Context) error {
 		c.mu.Unlock()
 		return ErrConnectionClosed
 	}
-	call, ok := c.calls[head.stream]
-	delete(c.calls, head.stream)
+	call, ok := c.calls[head.Stream]
+	delete(c.calls, head.Stream)
 	c.mu.Unlock()
 	if call == nil || !ok {
 		c.logger.Printf("gocql: received response for stream which has no handler: header=%v\n", head)
 		return c.discardFrame(head)
-	} else if head.stream != call.streamID {
-		panic(fmt.Sprintf("call has incorrect streamID: got %d expected %d", call.streamID, head.stream))
+	} else if head.Stream != call.streamID {
+		panic(fmt.Sprintf("call has incorrect streamID: got %d expected %d", call.streamID, head.Stream))
 	}
 
 	framer := newFramer(c.compressor, c.version)
@@ -1150,7 +1137,7 @@ func (c *Conn) exec(ctx context.Context, req frameBuilder, tracer Tracer) (*fram
 		// requests on the stream to prevent nil pointer dereferences in recv().
 		defer c.releaseStream(call)
 
-		if v := resp.framer.header.version.version(); v != c.version {
+		if v := resp.framer.header.Version.Version(); v != c.version {
 			return nil, NewErrProtocol("unexpected protocol version in response: got %d expected %d", v, c.version)
 		}
 
@@ -1244,7 +1231,7 @@ func (c *Conn) prepareStatement(ctx context.Context, stmt string, tracer Tracer)
 			prep := &writePrepareFrame{
 				statement: stmt,
 			}
-			if c.version > protoVersion4 {
+			if c.version > internal.ProtoVersion4 {
 				prep.keyspace = c.currentKeyspace
 			}
 
@@ -1276,7 +1263,7 @@ func (c *Conn) prepareStatement(ctx context.Context, stmt string, tracer Tracer)
 				flight.preparedStatment = &preparedStatment{
 					// defensively copy as we will recycle the underlying buffer after we
 					// return.
-					id: copyBytes(x.preparedID),
+					id: internal.CopyBytes(x.preparedID),
 					// the type info's should _not_ have a reference to the framers read buffer,
 					// therefore we can just copy them directly.
 					request:  x.reqMeta,
@@ -1303,12 +1290,12 @@ func (c *Conn) prepareStatement(ctx context.Context, stmt string, tracer Tracer)
 }
 
 func marshalQueryValue(typ TypeInfo, value interface{}, dst *queryValues) error {
-	if named, ok := value.(*namedValue); ok {
-		dst.name = named.name
-		value = named.value
+	if named, ok := value.(*internal.NamedValue); ok {
+		dst.name = named.Name
+		value = named.Value
 	}
 
-	if _, ok := value.(unsetColumn); !ok {
+	if _, ok := value.(internal.UnsetColumn); !ok {
 		val, err := Marshal(typ, value)
 		if err != nil {
 			return err
@@ -1338,7 +1325,7 @@ func (c *Conn) executeQuery(ctx context.Context, qry *Query) *Iter {
 	if qry.pageSize > 0 {
 		params.pageSize = qry.pageSize
 	}
-	if c.version > protoVersion4 {
+	if c.version > internal.ProtoVersion4 {
 		params.keyspace = c.currentKeyspace
 	}
 
@@ -1431,7 +1418,7 @@ func (c *Conn) executeQuery(ctx context.Context, qry *Query) *Iter {
 		if params.skipMeta {
 			if info != nil {
 				iter.meta = info.response
-				iter.meta.pagingState = copyBytes(x.meta.pagingState)
+				iter.meta.pagingState = internal.CopyBytes(x.meta.pagingState)
 			} else {
 				return &Iter{framer: framer, err: errors.New("gocql: did not receive metadata but prepared info is nil")}
 			}
@@ -1442,7 +1429,7 @@ func (c *Conn) executeQuery(ctx context.Context, qry *Query) *Iter {
 		if x.meta.morePages() && !qry.disableAutoPage {
 			newQry := new(Query)
 			*newQry = *qry
-			newQry.pageState = copyBytes(x.meta.pagingState)
+			newQry.pageState = internal.CopyBytes(x.meta.pagingState)
 			newQry.metrics = &queryMetrics{m: make(map[string]*hostMetrics)}
 
 			iter.next = &nextIter{
@@ -1531,7 +1518,7 @@ func (c *Conn) UseKeyspace(keyspace string) error {
 }
 
 func (c *Conn) executeBatch(ctx context.Context, batch *Batch) *Iter {
-	if c.version == protoVersion1 {
+	if c.version == internal.ProtoVersion1 {
 		return &Iter{err: ErrUnsupported}
 	}
 

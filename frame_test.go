@@ -26,6 +26,7 @@ package gocql
 
 import (
 	"bytes"
+	"github.com/gocql/gocql/internal"
 	"os"
 	"testing"
 )
@@ -65,7 +66,7 @@ func TestFuzzBugs(t *testing.T) {
 			continue
 		}
 
-		framer := newFramer(nil, byte(head.version))
+		framer := newFramer(nil, byte(head.Version))
 		err = framer.readFrame(r, &head)
 		if err != nil {
 			continue
@@ -88,8 +89,8 @@ func TestFrameWriteTooLong(t *testing.T) {
 
 	framer := newFramer(nil, 2)
 
-	framer.writeHeader(0, opStartup, 1)
-	framer.writeBytes(make([]byte, maxFrameSize+1))
+	framer.writeHeader(0, internal.OpStartup, 1)
+	framer.writeBytes(make([]byte, internal.MaxFrameSize+1))
 	err := framer.finish()
 	if err != ErrFrameTooBig {
 		t.Fatalf("expected to get %v got %v", ErrFrameTooBig, err)
@@ -102,16 +103,16 @@ func TestFrameReadTooLong(t *testing.T) {
 	}
 
 	r := &bytes.Buffer{}
-	r.Write(make([]byte, maxFrameSize+1))
+	r.Write(make([]byte, internal.MaxFrameSize+1))
 	// write a new header right after this frame to verify that we can read it
-	r.Write([]byte{0x02, 0x00, 0x00, byte(opReady), 0x00, 0x00, 0x00, 0x00})
+	r.Write([]byte{0x02, 0x00, 0x00, byte(internal.OpReady), 0x00, 0x00, 0x00, 0x00})
 
 	framer := newFramer(nil, 2)
 
-	head := frameHeader{
-		version: 2,
-		op:      opReady,
-		length:  r.Len() - 8,
+	head := internal.FrameHeader{
+		Version: 2,
+		Op:      internal.OpReady,
+		Length:  r.Len() - 8,
 	}
 
 	err := framer.readFrame(r, &head)
@@ -123,7 +124,7 @@ func TestFrameReadTooLong(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if head.op != opReady {
-		t.Fatalf("expected to get header %v got %v", opReady, head.op)
+	if head.Op != internal.OpReady {
+		t.Fatalf("expected to get header %v got %v", internal.OpReady, head.Op)
 	}
 }

@@ -32,6 +32,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/gocql/gocql/internal"
 	"strconv"
 	"strings"
 	"sync"
@@ -410,7 +411,7 @@ func compileMetadata(
 		table.OrderedColumns = append(table.OrderedColumns, col.Name)
 	}
 
-	if protoVersion == protoVersion1 {
+	if protoVersion == internal.ProtoVersion1 {
 		compileV1Metadata(tables, logger)
 	} else {
 		compileV2Metadata(tables, logger)
@@ -669,7 +670,7 @@ func getTableMetadata(session *Session, keyspaceName string) ([]TableMetadata, e
 			}
 			return r
 		}
-	} else if session.cfg.ProtoVersion == protoVersion1 {
+	} else if session.cfg.ProtoVersion == internal.ProtoVersion1 {
 		// we have key aliases
 		stmt = `
 		SELECT
@@ -948,14 +949,14 @@ func getColumnMetadata(session *Session, keyspaceName string) ([]ColumnMetadata,
 }
 
 func getTypeInfo(t string, logger StdLogger) TypeInfo {
-	if strings.HasPrefix(t, apacheCassandraTypePrefix) {
+	if strings.HasPrefix(t, internal.ApacheCassandraTypePrefix) {
 		t = apacheToCassandraType(t)
 	}
 	return getCassandraType(t, logger)
 }
 
 func getViewsMetadata(session *Session, keyspaceName string) ([]ViewMetadata, error) {
-	if session.cfg.ProtoVersion == protoVersion1 {
+	if session.cfg.ProtoVersion == internal.ProtoVersion1 {
 		return nil, nil
 	}
 	var tableName string
@@ -1069,7 +1070,7 @@ func getMaterializedViewsMetadata(session *Session, keyspaceName string) ([]Mate
 }
 
 func getFunctionsMetadata(session *Session, keyspaceName string) ([]FunctionMetadata, error) {
-	if session.cfg.ProtoVersion == protoVersion1 || !session.hasAggregatesAndFunctions {
+	if session.cfg.ProtoVersion == internal.ProtoVersion1 || !session.hasAggregatesAndFunctions {
 		return nil, nil
 	}
 	var tableName string
@@ -1124,7 +1125,7 @@ func getFunctionsMetadata(session *Session, keyspaceName string) ([]FunctionMeta
 }
 
 func getAggregatesMetadata(session *Session, keyspaceName string) ([]AggregateMetadata, error) {
-	if session.cfg.ProtoVersion == protoVersion1 || !session.hasAggregatesAndFunctions {
+	if session.cfg.ProtoVersion == internal.ProtoVersion1 || !session.hasAggregatesAndFunctions {
 		return nil, nil
 	}
 	var tableName string

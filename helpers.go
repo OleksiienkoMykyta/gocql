@@ -32,6 +32,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gocql/gocql/internal"
+
 	"gopkg.in/inf.v0"
 )
 
@@ -99,10 +101,6 @@ func goType(t TypeInfo) (reflect.Type, error) {
 	default:
 		return nil, fmt.Errorf("cannot create Go type for unknown CQL type %s", t)
 	}
-}
-
-func dereference(i interface{}) interface{} {
-	return reflect.Indirect(reflect.ValueOf(i)).Interface()
 }
 
 func getCassandraBaseType(name string) Type {
@@ -176,7 +174,7 @@ func getCassandraType(name string, logger StdLogger) TypeInfo {
 			Elem:       getCassandraType(strings.TrimPrefix(name[:len(name)-1], "list<"), logger),
 		}
 	} else if strings.HasPrefix(name, "map<") {
-		names := splitCompositeTypes(strings.TrimPrefix(name[:len(name)-1], "map<"))
+		names := internal.SplitCompositeTypes(strings.TrimPrefix(name[:len(name)-1], "map<"))
 		if len(names) != 2 {
 			logger.Printf("Error parsing map type, it has %d subelements, expecting 2\n", len(names))
 			return NativeType{
@@ -189,7 +187,7 @@ func getCassandraType(name string, logger StdLogger) TypeInfo {
 			Elem:       getCassandraType(names[1], logger),
 		}
 	} else if strings.HasPrefix(name, "tuple<") {
-		names := splitCompositeTypes(strings.TrimPrefix(name[:len(name)-1], "tuple<"))
+		names := internal.SplitCompositeTypes(strings.TrimPrefix(name[:len(name)-1], "tuple<"))
 		types := make([]TypeInfo, len(names))
 
 		for i, name := range names {
@@ -207,36 +205,8 @@ func getCassandraType(name string, logger StdLogger) TypeInfo {
 	}
 }
 
-func splitCompositeTypes(name string) []string {
-	if !strings.Contains(name, "<") {
-		return strings.Split(name, ", ")
-	}
-	var parts []string
-	lessCount := 0
-	segment := ""
-	for _, char := range name {
-		if char == ',' && lessCount == 0 {
-			if segment != "" {
-				parts = append(parts, strings.TrimSpace(segment))
-			}
-			segment = ""
-			continue
-		}
-		segment += string(char)
-		if char == '<' {
-			lessCount++
-		} else if char == '>' {
-			lessCount--
-		}
-	}
-	if segment != "" {
-		parts = append(parts, strings.TrimSpace(segment))
-	}
-	return parts
-}
-
 func apacheToCassandraType(t string) string {
-	t = strings.Replace(t, apacheCassandraTypePrefix, "", -1)
+	t = strings.Replace(t, internal.ApacheCassandraTypePrefix, "", -1)
 	t = strings.Replace(t, "(", "<", -1)
 	t = strings.Replace(t, ")", ">", -1)
 	types := strings.FieldsFunc(t, func(r rune) bool {
@@ -250,7 +220,7 @@ func apacheToCassandraType(t string) string {
 }
 
 func getApacheCassandraType(class string) Type {
-	switch strings.TrimPrefix(class, apacheCassandraTypePrefix) {
+	switch strings.TrimPrefix(class, internal.ApacheCassandraTypePrefix) {
 	case "AsciiType":
 		return TypeAscii
 	case "LongType":
@@ -304,7 +274,7 @@ func getApacheCassandraType(class string) Type {
 
 func (r *RowData) rowMap(m map[string]interface{}) {
 	for i, column := range r.Columns {
-		val := dereference(r.Values[i])
+		val := internal.Dereference(r.Values[i])
 		if valVal := reflect.ValueOf(val); valVal.Kind() == reflect.Slice {
 			valCopy := reflect.MakeSlice(valVal.Type(), valVal.Len(), valVal.Cap())
 			reflect.Copy(valCopy, valVal)
@@ -451,18 +421,9 @@ func (iter *Iter) MapScan(m map[string]interface{}) bool {
 	return false
 }
 
-func copyBytes(p []byte) []byte {
-	b := make([]byte, len(p))
-	copy(b, p)
-	return b
-}
-
-var failDNS = false
-
 func LookupIP(host string) ([]net.IP, error) {
-	if failDNS {
+	if internal.FailDNS {
 		return nil, &net.DNSError{}
 	}
 	return net.LookupIP(host)
-
 }

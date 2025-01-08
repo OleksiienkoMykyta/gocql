@@ -26,6 +26,7 @@ package gocql
 
 import (
 	"compress/gzip"
+	"github.com/gocql/gocql/internal"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -56,10 +57,10 @@ func BenchmarkParseRowsFrame(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		framer := &framer{
-			header: &frameHeader{
-				version: protoVersion4 | 0x80,
-				op:      opResult,
-				length:  len(data),
+			header: &internal.FrameHeader{
+				Version: internal.ProtoVersion4 | 0x80,
+				Op:      internal.OpResult,
+				Length:  len(data),
 			},
 			buf: data,
 		}

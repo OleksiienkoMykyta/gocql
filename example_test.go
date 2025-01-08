@@ -27,9 +27,8 @@ package gocql_test
 import (
 	"context"
 	"fmt"
-	"log"
-
 	gocql "github.com/gocql/gocql"
+	"log"
 )
 
 func Example() {

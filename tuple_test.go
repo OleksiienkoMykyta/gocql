@@ -35,7 +35,7 @@ import (
 func TestTupleSimple(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("tuple types are only available of proto>=3")
 	}
 
@@ -79,7 +79,7 @@ func TestTupleSimple(t *testing.T) {
 func TestTuple_NullTuple(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("tuple types are only available of proto>=3")
 	}
 
@@ -117,7 +117,7 @@ func TestTuple_NullTuple(t *testing.T) {
 func TestTuple_TupleNotSet(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("tuple types are only available of proto>=3")
 	}
 
@@ -170,7 +170,7 @@ func TestTuple_TupleNotSet(t *testing.T) {
 func TestTupleMapScan(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("tuple types are only available of proto>=3")
 	}
 
@@ -203,7 +203,7 @@ func TestTupleMapScan(t *testing.T) {
 func TestTupleMapScanNil(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("tuple types are only available of proto>=3")
 	}
 	err := createTable(session, `CREATE TABLE gocql_test.tuple_map_scan_nil(
@@ -234,7 +234,7 @@ func TestTupleMapScanNil(t *testing.T) {
 func TestTupleMapScanNotSet(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("tuple types are only available of proto>=3")
 	}
 	err := createTable(session, `CREATE TABLE gocql_test.tuple_map_scan_not_set(
@@ -266,7 +266,7 @@ func TestTupleLastFieldEmpty(t *testing.T) {
 	// Regression test - empty value used to be treated as NULL value in the last tuple field
 	session := createSession(t)
 	defer session.Close()
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("tuple types are only available of proto>=3")
 	}
 	err := createTable(session, `CREATE TABLE gocql_test.tuple_last_field_empty(
@@ -304,7 +304,7 @@ func TestTupleLastFieldEmpty(t *testing.T) {
 func TestTuple_NestedCollection(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("tuple types are only available of proto>=3")
 	}
 
@@ -356,7 +356,7 @@ func TestTuple_NestedCollection(t *testing.T) {
 func TestTuple_NullableNestedCollection(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("tuple types are only available of proto>=3")
 	}
 

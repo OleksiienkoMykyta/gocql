@@ -37,6 +37,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/gocql/gocql/internal"
 )
 
 var (
@@ -50,7 +52,7 @@ func init() {
 		panic(fmt.Sprintf("unable to seed random number generator: %v", err))
 	}
 
-	randr = rand.New(rand.NewSource(int64(readInt(b))))
+	randr = rand.New(rand.NewSource(int64(internal.ReadInt(b))))
 }
 
 const (
@@ -199,7 +201,7 @@ func parseProtocolFromError(err error) int {
 	matches := protocolSupportRe.FindAllStringSubmatch(err.Error(), -1)
 	if len(matches) != 1 || len(matches[0]) != 2 {
 		if verr, ok := err.(*protocolError); ok {
-			return int(verr.frame.Header().version.version())
+			return int(verr.frame.Header().Version.Version())
 		}
 		return 0
 	}
@@ -459,7 +461,7 @@ func (c *controlConn) getConn() *connHost {
 	return c.conn.Load().(*connHost)
 }
 
-func (c *controlConn) writeFrame(w frameBuilder) (frame, error) {
+func (c *controlConn) writeFrame(w frameBuilder) (internal.Frame, error) {
 	ch := c.getConn()
 	if ch == nil {
 		return nil, errNoControl

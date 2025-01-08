@@ -24,7 +24,10 @@
 
 package gocql
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/gocql/gocql/internal"
+)
 
 // See CQL Binary Protocol v5, section 8 for more details.
 // https://github.com/apache/cassandra/blob/7337fc0/doc/native_protocol_v5.spec
@@ -118,7 +121,7 @@ type RequestError interface {
 }
 
 type errorFrame struct {
-	frameHeader
+	internal.FrameHeader
 
 	code    int
 	message string

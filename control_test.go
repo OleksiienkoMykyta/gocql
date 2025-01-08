@@ -25,6 +25,7 @@
 package gocql
 
 import (
+	"github.com/gocql/gocql/internal"
 	"net"
 	"testing"
 )
@@ -72,8 +73,8 @@ func TestParseProtocol(t *testing.T) {
 		{
 			err: &protocolError{
 				frame: errorFrame{
-					frameHeader: frameHeader{
-						version: 0x83,
+					FrameHeader: internal.FrameHeader{
+						Version: 0x83,
 					},
 					code:    0x10,
 					message: "Invalid or unsupported protocol version: 5",

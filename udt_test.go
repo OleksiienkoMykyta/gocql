@@ -72,7 +72,7 @@ func TestUDT_Marshaler(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("UDT are only available on protocol >= 3")
 	}
 
@@ -129,7 +129,7 @@ func TestUDT_Reflect(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("UDT are only available on protocol >= 3")
 	}
 
@@ -188,7 +188,7 @@ func TestUDT_NullObject(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("UDT are only available on protocol >= 3")
 	}
 
@@ -242,7 +242,7 @@ func TestMapScanUDT(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("UDT are only available on protocol >= 3")
 	}
 
@@ -329,7 +329,7 @@ func TestUDT_MissingField(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("UDT are only available on protocol >= 3")
 	}
 
@@ -379,7 +379,7 @@ func TestUDT_EmptyCollections(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("UDT are only available on protocol >= 3")
 	}
 
@@ -435,7 +435,7 @@ func TestUDT_UpdateField(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("UDT are only available on protocol >= 3")
 	}
 
@@ -492,7 +492,7 @@ func TestUDT_ScanNullUDT(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("UDT are only available on protocol >= 3")
 	}
 

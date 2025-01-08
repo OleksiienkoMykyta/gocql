@@ -25,6 +25,7 @@
 package gocql
 
 import (
+	"github.com/gocql/gocql/internal"
 	"net"
 	"sync"
 	"time"
@@ -34,15 +35,15 @@ type eventDebouncer struct {
 	name   string
 	timer  *time.Timer
 	mu     sync.Mutex
-	events []frame
+	events []internal.Frame
 
-	callback func([]frame)
+	callback func([]internal.Frame)
 	quit     chan struct{}
 
 	logger StdLogger
 }
 
-func newEventDebouncer(name string, eventHandler func([]frame), logger StdLogger) *eventDebouncer {
+func newEventDebouncer(name string, eventHandler func([]internal.Frame), logger StdLogger) *eventDebouncer {
 	e := &eventDebouncer{
 		name:     name,
 		quit:     make(chan struct{}),
@@ -89,10 +90,10 @@ func (e *eventDebouncer) flush() {
 	// the callback multiple times, probably a bad idea. In this case we could drop
 	// frames?
 	go e.callback(e.events)
-	e.events = make([]frame, 0, eventBufferSize)
+	e.events = make([]internal.Frame, 0, eventBufferSize)
 }
 
-func (e *eventDebouncer) debounce(frame frame) {
+func (e *eventDebouncer) debounce(frame internal.Frame) {
 	e.mu.Lock()
 	e.timer.Reset(eventDebounceTime)
 
@@ -129,7 +130,7 @@ func (s *Session) handleEvent(framer *framer) {
 	}
 }
 
-func (s *Session) handleSchemaEvent(frames []frame) {
+func (s *Session) handleSchemaEvent(frames []internal.Frame) {
 	// TODO: debounce events
 	for _, frame := range frames {
 		switch f := frame.(type) {
@@ -163,7 +164,7 @@ func (s *Session) handleKeyspaceChange(keyspace, change string) {
 // Processing topology change events before status change events ensures
 // that a NEW_NODE event is not dropped in favor of a newer UP event (which
 // would itself be dropped/ignored, as the node is not yet known).
-func (s *Session) handleNodeEvent(frames []frame) {
+func (s *Session) handleNodeEvent(frames []internal.Frame) {
 	type nodeEvent struct {
 		change string
 		host   net.IP

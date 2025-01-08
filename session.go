@@ -38,6 +38,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/gocql/gocql/internal"
 	"github.com/gocql/gocql/internal/lru"
 )
 
@@ -824,7 +825,6 @@ type queryMetrics struct {
 	totalAttempts int
 }
 
-// preFilledQueryMetrics initializes new queryMetrics based on per-host supplied data.
 func preFilledQueryMetrics(m map[string]*hostMetrics) *queryMetrics {
 	qm := &queryMetrics{m: m}
 	for _, hm := range qm.m {
@@ -1303,18 +1303,10 @@ func (q *Query) Exec() error {
 	return q.Iter().Close()
 }
 
-func isUseStatement(stmt string) bool {
-	if len(stmt) < 3 {
-		return false
-	}
-
-	return strings.EqualFold(stmt[0:3], "use")
-}
-
 // Iter executes the query and returns an iterator capable of iterating
 // over all results.
 func (q *Query) Iter() *Iter {
-	if isUseStatement(q.stmt) {
+	if internal.IsUseStatement(q.stmt) {
 		return &Iter{err: ErrUseStmt}
 	}
 	// if the query was specifically run on a connection then re-use that
@@ -1656,7 +1648,7 @@ func (iter *Iter) GetCustomPayload() map[string][]byte {
 // This is only available starting with CQL Protocol v4.
 func (iter *Iter) Warnings() []string {
 	if iter.framer != nil {
-		return iter.framer.header.warnings
+		return iter.framer.header.Warnings
 	}
 	return nil
 }

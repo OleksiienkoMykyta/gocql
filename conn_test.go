@@ -35,6 +35,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/gocql/gocql/internal"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -50,26 +51,26 @@ import (
 )
 
 const (
-	defaultProto = protoVersion2
+	defaultProto = internal.ProtoVersion2
 )
 
 func TestApprove(t *testing.T) {
 	tests := map[bool]bool{
-		approve("org.apache.cassandra.auth.PasswordAuthenticator", []string{}):                                             true,
-		approve("org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator", []string{}):                        true,
-		approve("org.apache.cassandra.auth.MutualTlsAuthenticator", []string{}):                                            true,
-		approve("com.instaclustr.cassandra.auth.SharedSecretAuthenticator", []string{}):                                    true,
-		approve("com.datastax.bdp.cassandra.auth.DseAuthenticator", []string{}):                                            true,
-		approve("io.aiven.cassandra.auth.AivenAuthenticator", []string{}):                                                  true,
-		approve("com.amazon.helenus.auth.HelenusAuthenticator", []string{}):                                                true,
-		approve("com.ericsson.bss.cassandra.ecaudit.auth.AuditAuthenticator", []string{}):                                  true,
-		approve("com.scylladb.auth.SaslauthdAuthenticator", []string{}):                                                    true,
-		approve("com.scylladb.auth.TransitionalAuthenticator", []string{}):                                                 true,
-		approve("com.instaclustr.cassandra.auth.InstaclustrPasswordAuthenticator", []string{}):                             true,
-		approve("com.apache.cassandra.auth.FakeAuthenticator", []string{}):                                                 true,
-		approve("com.apache.cassandra.auth.FakeAuthenticator", nil):                                                        true,
-		approve("com.apache.cassandra.auth.FakeAuthenticator", []string{"com.apache.cassandra.auth.FakeAuthenticator"}):    true,
-		approve("com.apache.cassandra.auth.FakeAuthenticator", []string{"com.apache.cassandra.auth.NotFakeAuthenticator"}): false,
+		internal.Approve("org.apache.cassandra.auth.PasswordAuthenticator", []string{}):                                             true,
+		internal.Approve("org.apache.cassandra.auth.MutualTlsWithPasswordFallbackAuthenticator", []string{}):                        true,
+		internal.Approve("org.apache.cassandra.auth.MutualTlsAuthenticator", []string{}):                                            true,
+		internal.Approve("com.instaclustr.cassandra.auth.SharedSecretAuthenticator", []string{}):                                    true,
+		internal.Approve("com.datastax.bdp.cassandra.auth.DseAuthenticator", []string{}):                                            true,
+		internal.Approve("io.aiven.cassandra.auth.AivenAuthenticator", []string{}):                                                  true,
+		internal.Approve("com.amazon.helenus.auth.HelenusAuthenticator", []string{}):                                                true,
+		internal.Approve("com.ericsson.bss.cassandra.ecaudit.auth.AuditAuthenticator", []string{}):                                  true,
+		internal.Approve("com.scylladb.auth.SaslauthdAuthenticator", []string{}):                                                    true,
+		internal.Approve("com.scylladb.auth.TransitionalAuthenticator", []string{}):                                                 true,
+		internal.Approve("com.instaclustr.cassandra.auth.InstaclustrPasswordAuthenticator", []string{}):                             true,
+		internal.Approve("com.apache.cassandra.auth.FakeAuthenticator", []string{}):                                                 true,
+		internal.Approve("com.apache.cassandra.auth.FakeAuthenticator", nil):                                                        true,
+		internal.Approve("com.apache.cassandra.auth.FakeAuthenticator", []string{"com.apache.cassandra.auth.FakeAuthenticator"}):    true,
+		internal.Approve("com.apache.cassandra.auth.FakeAuthenticator", []string{"com.apache.cassandra.auth.NotFakeAuthenticator"}): false,
 	}
 	for k, v := range tests {
 		if k != v {
@@ -92,7 +93,7 @@ func TestJoinHostPort(t *testing.T) {
 	}
 }
 
-func testCluster(proto protoVersion, addresses ...string) *ClusterConfig {
+func testCluster(proto internal.ProtoVersion, addresses ...string) *ClusterConfig {
 	cluster := NewCluster(addresses...)
 	cluster.ProtoVersion = int(proto)
 	cluster.disableControlConn = true
@@ -142,7 +143,7 @@ func TestSSLSimpleNoClientCert(t *testing.T) {
 	}
 }
 
-func createTestSslCluster(addr string, proto protoVersion, useClientCert bool) *ClusterConfig {
+func createTestSslCluster(addr string, proto internal.ProtoVersion, useClientCert bool) *ClusterConfig {
 	cluster := testCluster(proto, addr)
 	sslOpts := &SslOptions{
 		CaPath:                 "testdata/pki/ca.crt",
@@ -176,7 +177,7 @@ func TestClosed(t *testing.T) {
 	}
 }
 
-func newTestSession(proto protoVersion, addresses ...string) (*Session, error) {
+func newTestSession(proto internal.ProtoVersion, addresses ...string) (*Session, error) {
 	return testCluster(proto, addresses...).CreateSession()
 }
 
@@ -184,8 +185,8 @@ func TestDNSLookupConnected(t *testing.T) {
 	log := &testLogger{}
 
 	// Override the defaul DNS resolver and restore at the end
-	failDNS = true
-	defer func() { failDNS = false }()
+	internal.FailDNS = true
+	defer func() { internal.FailDNS = false }()
 
 	srv := NewTestServer(t, defaultProto, context.Background())
 	defer srv.Stop()
@@ -211,8 +212,8 @@ func TestDNSLookupError(t *testing.T) {
 	log := &testLogger{}
 
 	// Override the defaul DNS resolver and restore at the end
-	failDNS = true
-	defer func() { failDNS = false }()
+	internal.FailDNS = true
+	defer func() { internal.FailDNS = false }()
 
 	cluster := NewCluster("cassandra1.invalid", "cassandra2.invalid")
 	cluster.Logger = log
@@ -698,9 +699,9 @@ func TestStream0(t *testing.T) {
 	const expErr = "gocql: received unexpected frame on stream 0"
 
 	var buf bytes.Buffer
-	f := newFramer(nil, protoVersion4)
-	f.writeHeader(0, opResult, 0)
-	f.writeInt(resultKindVoid)
+	f := newFramer(nil, internal.ProtoVersion4)
+	f.writeHeader(0, internal.OpResult, 0)
+	f.writeInt(internal.ResultKindVoid)
 	f.buf[0] |= 0x80
 	if err := f.finish(); err != nil {
 		t.Fatal(err)
@@ -711,7 +712,7 @@ func TestStream0(t *testing.T) {
 
 	conn := &Conn{
 		r:       bufio.NewReader(&buf),
-		streams: streams.New(protoVersion4),
+		streams: streams.New(internal.ProtoVersion4),
 		logger:  &defaultLogger{},
 	}
 
@@ -757,7 +758,7 @@ func TestContext_CanceledBeforeExec(t *testing.T) {
 		addr:     "127.0.0.1:0",
 		protocol: defaultProto,
 		recvHook: func(f *framer) {
-			if f.header.op == opStartup || f.header.op == opOptions {
+			if f.header.Op == internal.OpStartup || f.header.Op == internal.OpOptions {
 				// ignore statup and heartbeat messages
 				return
 			}
@@ -989,7 +990,7 @@ func TestFrameHeaderObserver(t *testing.T) {
 	}
 
 	frames := observer.getFrames()
-	expFrames := []frameOp{opSupported, opReady, opResult}
+	expFrames := []internal.FrameOp{internal.OpSupported, internal.OpReady, internal.OpResult}
 	if len(frames) != len(expFrames) {
 		t.Fatalf("Expected to receive %d frames, instead received %d", len(expFrames), len(frames))
 	}
@@ -1030,7 +1031,7 @@ func (nts newTestServerOpts) newServer(t testing.TB, ctx context.Context) *TestS
 	}
 
 	headerSize := 8
-	if nts.protocol > protoVersion2 {
+	if nts.protocol > internal.ProtoVersion2 {
 		headerSize = 9
 	}
 
@@ -1077,7 +1078,7 @@ func NewSSLTestServer(t testing.TB, protocol uint8, ctx context.Context) *TestSe
 	}
 
 	headerSize := 8
-	if protocol > protoVersion2 {
+	if protocol > internal.ProtoVersion2 {
 		headerSize = 9
 	}
 
@@ -1195,8 +1196,8 @@ func (srv *TestServer) process(conn net.Conn, reqFrame *framer) {
 	}
 	respFrame := newFramer(nil, reqFrame.proto)
 
-	switch head.op {
-	case opStartup:
+	switch head.Op {
+	case internal.OpStartup:
 		if atomic.LoadInt32(&srv.TimeoutOnStartup) > 0 {
 			// Do not respond to startup command
 			// wait until we get a cancel signal
@@ -1205,11 +1206,11 @@ func (srv *TestServer) process(conn net.Conn, reqFrame *framer) {
 				return
 			}
 		}
-		respFrame.writeHeader(0, opReady, head.stream)
-	case opOptions:
-		respFrame.writeHeader(0, opSupported, head.stream)
+		respFrame.writeHeader(0, internal.OpReady, head.Stream)
+	case internal.OpOptions:
+		respFrame.writeHeader(0, internal.OpSupported, head.Stream)
 		respFrame.writeShort(0)
-	case opQuery:
+	case internal.OpQuery:
 		query := reqFrame.readLongString()
 		first := query
 		if n := strings.Index(query, " "); n > 0 {
@@ -1218,22 +1219,22 @@ func (srv *TestServer) process(conn net.Conn, reqFrame *framer) {
 		switch strings.ToLower(first) {
 		case "kill":
 			atomic.AddInt64(&srv.nKillReq, 1)
-			respFrame.writeHeader(0, opError, head.stream)
+			respFrame.writeHeader(0, internal.OpError, head.Stream)
 			respFrame.writeInt(0x1001)
 			respFrame.writeString("query killed")
 		case "use":
-			respFrame.writeInt(resultKindKeyspace)
+			respFrame.writeInt(internal.ResultKindKeyspace)
 			respFrame.writeString(strings.TrimSpace(query[3:]))
 		case "void":
-			respFrame.writeHeader(0, opResult, head.stream)
-			respFrame.writeInt(resultKindVoid)
+			respFrame.writeHeader(0, internal.OpResult, head.Stream)
+			respFrame.writeInt(internal.ResultKindVoid)
 		case "timeout":
 			<-srv.ctx.Done()
 			return
 		case "slow":
 			go func() {
-				respFrame.writeHeader(0, opResult, head.stream)
-				respFrame.writeInt(resultKindVoid)
+				respFrame.writeHeader(0, internal.OpResult, head.Stream)
+				respFrame.writeInt(internal.ResultKindVoid)
 				respFrame.buf[0] = srv.protocol | 0x80
 				select {
 				case <-srv.ctx.Done():
@@ -1247,25 +1248,25 @@ func (srv *TestServer) process(conn net.Conn, reqFrame *framer) {
 		case "speculative":
 			atomic.AddInt64(&srv.nKillReq, 1)
 			if atomic.LoadInt64(&srv.nKillReq) > 3 {
-				respFrame.writeHeader(0, opResult, head.stream)
-				respFrame.writeInt(resultKindVoid)
+				respFrame.writeHeader(0, internal.OpResult, head.Stream)
+				respFrame.writeInt(internal.ResultKindVoid)
 				respFrame.writeString("speculative query success on the node " + srv.Address)
 			} else {
-				respFrame.writeHeader(0, opError, head.stream)
+				respFrame.writeHeader(0, internal.OpError, head.Stream)
 				respFrame.writeInt(0x1001)
 				respFrame.writeString("speculative error")
 				rand.Seed(time.Now().UnixNano())
 				<-time.After(time.Millisecond * 120)
 			}
 		default:
-			respFrame.writeHeader(0, opResult, head.stream)
-			respFrame.writeInt(resultKindVoid)
+			respFrame.writeHeader(0, internal.OpResult, head.Stream)
+			respFrame.writeInt(internal.ResultKindVoid)
 		}
-	case opError:
-		respFrame.writeHeader(0, opError, head.stream)
+	case internal.OpError:
+		respFrame.writeHeader(0, internal.OpError, head.Stream)
 		respFrame.buf = append(respFrame.buf, reqFrame.buf...)
 	default:
-		respFrame.writeHeader(0, opError, head.stream)
+		respFrame.writeHeader(0, internal.OpError, head.Stream)
 		respFrame.writeInt(0)
 		respFrame.writeString("not supported")
 	}
@@ -1295,10 +1296,10 @@ func (srv *TestServer) readFrame(conn net.Conn) (*framer, error) {
 	}
 
 	// should be a request frame
-	if head.version.response() {
-		return nil, fmt.Errorf("expected to read a request frame got version: %v", head.version)
-	} else if head.version.version() != srv.protocol {
-		return nil, fmt.Errorf("expected to read protocol version 0x%x got 0x%x", srv.protocol, head.version.version())
+	if head.Version.Response() {
+		return nil, fmt.Errorf("expected to read a request frame got version: %v", head.Version)
+	} else if head.Version.Version() != srv.protocol {
+		return nil, fmt.Errorf("expected to read protocol version 0x%x got 0x%x", srv.protocol, head.Version.Version())
 	}
 
 	return framer, nil

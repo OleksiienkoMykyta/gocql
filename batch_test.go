@@ -39,7 +39,7 @@ func TestBatch_Errors(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	if session.cfg.ProtoVersion < protoVersion2 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion2 {
 		t.Skip("atomic batches not supported. Please use Cassandra >= 2.0")
 	}
 
@@ -58,7 +58,7 @@ func TestBatch_WithTimestamp(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("Batch timestamps are only available on protocol >= 3")
 	}
 

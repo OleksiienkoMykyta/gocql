@@ -1120,7 +1120,7 @@ func TestSmallInt(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	if session.cfg.ProtoVersion < protoVersion4 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion4 {
 		t.Skip("smallint is only supported in cassandra 2.2+")
 	}
 
@@ -2146,7 +2146,7 @@ func TestGetTableMetadata(t *testing.T) {
 	if testTable == nil {
 		t.Fatal("Expected table metadata for name 'test_table_metadata'")
 	}
-	if session.cfg.ProtoVersion == protoVersion1 {
+	if session.cfg.ProtoVersion == internal.ProtoVersion1 {
 		if testTable.KeyValidator != "org.apache.cassandra.db.marshal.Int32Type" {
 			t.Errorf("Expected test_table_metadata key validator to be 'org.apache.cassandra.db.marshal.Int32Type' but was '%s'", testTable.KeyValidator)
 		}
@@ -2813,7 +2813,7 @@ func TestNegativeStream(t *testing.T) {
 
 	const stream = -50
 	writer := frameWriterFunc(func(f *framer, streamID int) error {
-		f.writeHeader(0, opOptions, stream)
+		f.writeHeader(0, internal.OpOptions, stream)
 		return f.finish()
 	})
 
@@ -3116,7 +3116,7 @@ func TestUnmarshallNestedTypes(t *testing.T) {
 	session := createSession(t)
 	defer session.Close()
 
-	if session.cfg.ProtoVersion < protoVersion3 {
+	if session.cfg.ProtoVersion < internal.ProtoVersion3 {
 		t.Skip("can not have frozen types in cassandra < 2.1.3")
 	}
 

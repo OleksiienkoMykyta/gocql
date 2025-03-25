@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Moved the Snappy compressor into its own separate package (CASSGO-33)
+
 - Move lz4 compressor to lz4 package within the gocql module (CASSGO-32)
 
 - Don't restrict server authenticator unless PasswordAuthentictor.AllowedAuthenticators is provided (CASSGO-19)

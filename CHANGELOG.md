@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Query.SetKeyspace(), Query.WithNowInSeconds(), Batch.SetKeyspace(), Batch.WithNowInSeconds() (CASSGO-1)
 
 ### Changed
+- Make HostFilter interface easier to test (CASSGO-71)
 
 - Move lz4 compressor to lz4 package within the gocql module (CASSGO-32)
 

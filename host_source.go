@@ -146,15 +146,6 @@ func (c cassVersion) String() string {
 	return fmt.Sprintf("v%d.%d.%d", c.Major, c.Minor, c.Patch)
 }
 
-func (c cassVersion) nodeUpDelay() time.Duration {
-	if c.Major >= 2 && c.Minor >= 2 {
-		// CASSANDRA-8236
-		return 0
-	}
-
-	return 10 * time.Second
-}
-
 type HostInfo struct {
 	// TODO(zariel): reduce locking maybe, not all values will change, but to ensure
 	// that we are thread safe use a mutex to access all fields.
@@ -341,10 +332,10 @@ func (h *HostInfo) ClusterName() string {
 	return h.clusterName
 }
 
-func (h *HostInfo) Version() cassVersion {
+func (h *HostInfo) Version() CassVersion {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return h.version
+	return &h.version
 }
 
 func (h *HostInfo) State() nodeState {

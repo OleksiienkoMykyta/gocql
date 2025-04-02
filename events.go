@@ -227,9 +227,6 @@ func (s *Session) handleNodeUp(eventIp net.IP, eventPort int) {
 		return
 	}
 
-	if d := host.Version().nodeUpDelay(); d > 0 {
-		time.Sleep(d)
-	}
 	s.startPoolFill(host)
 }
 

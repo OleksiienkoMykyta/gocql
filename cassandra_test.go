@@ -480,6 +480,12 @@ func TestCAS(t *testing.T) {
 		t.Fatalf("insert should have not been applied: title=%v revID=%v modified=%v", titleCAS, revidCAS, modifiedCAS)
 	}
 
+	// TODO: This test failing with error due to "function dateof" on cassandra side.
+	//  It was officially removed in version 5.0.0. The recommended replacement for dateOf is the toTimestamp function.
+	//   As we are not testing against deprecated cassandra versions, it makes sense to update tests to keep them up to date
+	//	 === RUN   TestCAS
+	// 	 cassandra_test.go:487: insert: Unknown function dateof called
+	// 	 --- FAIL: TestCAS (0.97s)
 	insertBatch := session.Batch(LoggedBatch)
 	insertBatch.Query("INSERT INTO cas_table (title, revid, last_modified) VALUES ('_foo', 2c3af400-73a4-11e5-9381-29463d90c3f0, DATEOF(NOW()))")
 	insertBatch.Query("INSERT INTO cas_table (title, revid, last_modified) VALUES ('_foo', 3e4ad2f1-73a4-11e5-9381-29463d90c3f0, DATEOF(NOW()))")
@@ -951,7 +957,7 @@ func TestReconnection(t *testing.T) {
 		t.Fatal("Host should be NodeDown but not.")
 	}
 
-	time.Sleep(cluster.ReconnectInterval + h.Version().nodeUpDelay() + 1*time.Second)
+	time.Sleep(cluster.ReconnectInterval + 1*time.Second)
 
 	if h.State() != NodeUp {
 		t.Fatal("Host should be NodeUp but not. Failed to reconnect.")

@@ -24,31 +24,66 @@
 
 package gocql
 
-import "fmt"
+import (
+	"fmt"
+	"net"
+)
 
 // HostFilter interface is used when a host is discovered via server sent events.
 type HostFilter interface {
 	// Called when a new host is discovered, returning true will cause the host
 	// to be added to the pools.
-	Accept(host *HostInfo) bool
+	Accept(host Host) bool
+}
+
+// Host interface is provided to enable testing of custom implementations of the HostFilter interface.
+type Host interface {
+	Peer() net.IP
+	ConnectAddress() net.IP
+	BroadcastAddress() net.IP
+	ListenAddress() net.IP
+	RPCAddress() net.IP
+	PreferredIP() net.IP
+	DataCenter() string
+	Rack() string
+	HostID() string
+	WorkLoad() string
+	Graph() bool
+	DSEVersion() string
+	Partitioner() string
+	ClusterName() string
+	Version() CassVersion
+	Tokens() []string
+	Port() int
+	IsUp() bool
+	String() string
+}
+
+// Since cassVersion is an unexported type, the CassVersion interface is introduced
+// to allow better testability and increase test coverage.
+type CassVersion interface {
+	Set(v string) error
+	UnmarshalCQL(info TypeInfo, data []byte) error
+	AtLeast(major, minor, patch int) bool
+	String() string
 }
 
 // HostFilterFunc converts a func(host HostInfo) bool into a HostFilter
-type HostFilterFunc func(host *HostInfo) bool
+type HostFilterFunc func(host Host) bool
 
-func (fn HostFilterFunc) Accept(host *HostInfo) bool {
+func (fn HostFilterFunc) Accept(host Host) bool {
 	return fn(host)
 }
 
 // AcceptAllFilter will accept all hosts
 func AcceptAllFilter() HostFilter {
-	return HostFilterFunc(func(host *HostInfo) bool {
+	return HostFilterFunc(func(host Host) bool {
 		return true
 	})
 }
 
 func DenyAllFilter() HostFilter {
-	return HostFilterFunc(func(host *HostInfo) bool {
+	return HostFilterFunc(func(host Host) bool {
 		return false
 	})
 }
@@ -56,7 +91,7 @@ func DenyAllFilter() HostFilter {
 // DataCenterHostFilter filters all hosts such that they are in the same data center
 // as the supplied data center.
 func DataCenterHostFilter(dataCenter string) HostFilter {
-	return HostFilterFunc(func(host *HostInfo) bool {
+	return HostFilterFunc(func(host Host) bool {
 		return host.DataCenter() == dataCenter
 	})
 }
@@ -81,7 +116,7 @@ func WhiteListHostFilter(hosts ...string) HostFilter {
 		m[host.ConnectAddress().String()] = true
 	}
 
-	return HostFilterFunc(func(host *HostInfo) bool {
+	return HostFilterFunc(func(host Host) bool {
 		return m[host.ConnectAddress().String()]
 	})
 }

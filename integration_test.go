@@ -114,7 +114,7 @@ func TestHostFilterDiscovery(t *testing.T) {
 	// we'll filter out the second host
 	filtered := clusterHosts[1]
 	cluster.Hosts = clusterHosts[:1]
-	cluster.HostFilter = HostFilterFunc(func(host *HostInfo) bool {
+	cluster.HostFilter = HostFilterFunc(func(host Host) bool {
 		if host.ConnectAddress().String() == filtered {
 			return false
 		}
@@ -138,7 +138,7 @@ func TestHostFilterInitial(t *testing.T) {
 	cluster.PoolConfig.HostSelectionPolicy = rr
 	// we'll filter out the second host
 	filtered := clusterHosts[1]
-	cluster.HostFilter = HostFilterFunc(func(host *HostInfo) bool {
+	cluster.HostFilter = HostFilterFunc(func(host Host) bool {
 		if host.ConnectAddress().String() == filtered {
 			return false
 		}
